@@ -11,33 +11,55 @@ var configs = "configs"
 
 var log = logrus.New()
 
-// Server is main object to interact with an Arma server
-type Server struct {
+// BaseServer is base struct for server and headless clients
+type BaseServer struct {
 	// Path is the path to the ARMA directory. Not the path to the executable
 	Path string
-
-	// Admins is a list of strings of steamID's
-	Admins []string
-
 	// Platform is either linux, windows, or wine
 	Platform string
+	// Port the server will run on
+	Port        string
+	NoLogs      bool
+	EnableHT    bool
+	ProfileName string
+	Profiles    string
+	Mod         string
 }
 
-// func getPlatform() {
+// Server is a struct for an ARMA server
+type Server struct {
+	// Admins is a list of strings of steamID's
+	Admins              []string
+	AutoInit            bool
+	BasicConfig         string
+	BEPath              string
+	LoadMissionToMemory bool
+	ServerConfig        string
+	ServerMod           string
+	BaseServer
+}
 
-// 	switch runtime.GOOS {
-// 	case "windows":
-// 		platform = "windows"
-// 	case "linux":
-// 		platform = "linux"
-// 	}
+// HeadlessClient is a struct that will represent a headless client
+type HeadlessClient struct {
+	connect  string
+	password string
+	BaseServer
+}
 
-// 	if platform == "" {
-// 		log.Fatal("Your operating system doesn't support Arma")
-// 	}
+// NewServer should be used when you want to create a server
+func NewServer() *Server {
+	var admins = []string{}
+	server := &Server{
+		Admins: admins,
+	}
+	server.Port = "2302"
+	server.NoLogs = false
+	server.EnableHT = true
 
-// 	return platform
-// }
+	// TODO: Contine defaults
+
+	return server
+}
 
 // Start an Arma server
 func (s *Server) Start() ([]byte, error) {
@@ -52,6 +74,8 @@ func (s *Server) Start() ([]byte, error) {
 		armaExecutable = strings.Join([]string{s.Path, "arma3server.exe"}, "/")
 	case "linux":
 		armaExecutable = strings.Join([]string{s.Path, "arma3server"}, "/")
+	default:
+		log.Error("Platform not specified, should be windows, wine, or linux")
 	}
 
 	armaServer := exec.Cmd{
