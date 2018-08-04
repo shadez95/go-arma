@@ -1,15 +1,13 @@
 package arma
 
 import (
+	"log"
+
 	"os/exec"
 	"strings"
-
-	"github.com/Sirupsen/logrus"
 )
 
 var configs = "configs"
-
-var log = logrus.New()
 
 // Platform type represents what platform the server will run on
 type Platform string
@@ -34,16 +32,14 @@ type BaseConfig struct {
 	NoLogs   bool
 	EnableHT bool
 	Profiles string
-	Mod      string
+	Mods     []string
+	BEPath   string
 }
 
 // Server is a struct for an ARMA server
 type Server struct {
-	// Admins is a list of strings of steamID's
-	Admins              []string
 	AutoInit            bool
 	BasicConfig         string
-	BEPath              string
 	LoadMissionToMemory bool
 	ProfileName         string
 	ServerConfig        string
@@ -75,6 +71,82 @@ func NewServer(server *Server) *Server {
 	return server
 }
 
+// Start an Arma server. Returns path to executable and args used
+func (s *Server) Start() (string, []string) {
+
+	var mods string
+	var args []string
+	var armaExecutable string
+
+	switch s.Platform {
+	case Windows:
+		armaExecutable = strings.Join([]string{s.Path, "arma3server.exe"}, "\\")
+		mods = strings.Join(s.Mods, ";")
+	case Wine:
+		armaExecutable = strings.Join([]string{s.Path, "arma3server.exe"}, "/")
+		mods = strings.Join(s.Mods, ";")
+	case Linux:
+		armaExecutable = strings.Join([]string{s.Path, "arma3server"}, "/")
+		mods = strings.Join(s.Mods, `\;`)
+	default:
+		// s.Logger.Error("Platform not specified, should be windows, wine, or linux")
+		log.Fatal("Platform not specified, should be windows, wine, or linux")
+	}
+
+	args = append(args, "-port="+s.Port)
+
+	args = append(args, "-noSound")
+
+	if s.NoLogs {
+		args = append(args, "-noLogs")
+	}
+
+	if s.EnableHT {
+		args = append(args, "-enableHT")
+	}
+
+	if len(s.Profiles) > 0 {
+		args = append(args, "-profiles="+s.Profiles)
+	}
+
+	if len(s.Mods) > 0 {
+		args = append(args, "-mod="+mods)
+	}
+
+	if s.AutoInit {
+		args = append(args, "-autoInit")
+	}
+
+	if len(s.BasicConfig) > 0 {
+		args = append(args, "-cfg="+s.BasicConfig)
+	}
+
+	if len(s.BEPath) > 0 {
+		args = append(args, "-bepath="+s.BEPath)
+	}
+
+	if s.LoadMissionToMemory {
+		args = append(args, "-loadMissionToMemory")
+	}
+
+	if len(s.ProfileName) > 0 {
+		args = append(args, "-name="+s.ProfileName)
+	}
+
+	if len(s.ServerConfig) > 0 {
+		args = append(args, "-config="+s.ServerConfig)
+	}
+
+	if len(s.ServerMod) > 0 {
+		args = append(args, "-serverMod="+s.ServerMod)
+	}
+
+	c := exec.Command(armaExecutable, args...)
+	c.Start()
+
+	return armaExecutable, args
+}
+
 // NewHeadlessClient starts a new instance of HeadlessClient with defaults set. ProfileName are required
 func NewHeadlessClient(hc *HeadlessClient) *HeadlessClient {
 	hc.Connect = "127.0.0.1"
@@ -82,28 +154,59 @@ func NewHeadlessClient(hc *HeadlessClient) *HeadlessClient {
 	return hc
 }
 
-// Start an Arma server
-func (s *Server) Start() ([]byte, error) {
+// Start an Arma server. Returns path to executable and args used
+func (s *HeadlessClient) Start() (string, []string) {
 
+	var mods string
 	var args []string
 	var armaExecutable string
 
 	switch s.Platform {
 	case Windows:
 		armaExecutable = strings.Join([]string{s.Path, "arma3server.exe"}, "\\")
+		mods = strings.Join(s.Mods, ";")
 	case Wine:
 		armaExecutable = strings.Join([]string{s.Path, "arma3server.exe"}, "/")
+		mods = strings.Join(s.Mods, ";")
 	case Linux:
 		armaExecutable = strings.Join([]string{s.Path, "arma3server"}, "/")
+		mods = strings.Join(s.Mods, `\;`)
 	default:
-		log.Error("Platform not specified, should be windows, wine, or linux")
+		// s.Logger.Error("Platform not specified, should be windows, wine, or linux")
+		log.Fatal("Platform not specified, should be windows, wine, or linux")
 	}
 
-	armaServer := exec.Cmd{
-		Path: armaExecutable,
-		Args: args,
-		Dir:  s.Path,
+	args = append(args, "-client")
+	args = append(args, "-connect="+s.Connect)
+	args = append(args, "-port="+s.Port)
+	args = append(args, "-noSound")
+
+	if s.NoLogs {
+		args = append(args, "-noLogs")
 	}
 
-	return armaServer.CombinedOutput()
+	if s.EnableHT {
+		args = append(args, "-enableHT")
+	}
+
+	if len(s.Profiles) > 0 {
+		args = append(args, "-profiles="+s.Profiles)
+	}
+
+	if len(s.Mods) > 0 {
+		args = append(args, "-mod="+mods)
+	}
+
+	if len(s.BEPath) > 0 {
+		args = append(args, "-bepath="+s.BEPath)
+	}
+
+	if len(s.ProfileName) > 0 {
+		args = append(args, "-name="+s.ProfileName)
+	}
+
+	c := exec.Command(armaExecutable, args...)
+	c.Start()
+
+	return armaExecutable, args
 }
