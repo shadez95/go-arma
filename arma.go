@@ -23,6 +23,8 @@ const (
 
 // BaseConfig is base struct for server and headless clients
 type BaseConfig struct {
+	// Executable is the actual binary file. Specify if you want to use 32 bit binary. Default uses 64 bit binary
+	Executable string
 	// Path is the path to the ARMA directory. Not the path to the executable
 	Path string
 	// Platform is either linux, windows, or wine
@@ -80,13 +82,25 @@ func (s *Server) Start() (string, []string) {
 
 	switch s.Platform {
 	case Windows:
-		armaExecutable = strings.Join([]string{s.Path, "arma3server.exe"}, "\\")
+		if len(s.Executable) > 0 {
+			armaExecutable = strings.Join([]string{s.Path, s.Executable}, "\\")
+		} else {
+			armaExecutable = strings.Join([]string{s.Path, "arma3server_x64.exe"}, "\\")
+		}
 		mods = strings.Join(s.Mods, ";")
 	case Wine:
-		armaExecutable = strings.Join([]string{s.Path, "arma3server.exe"}, "/")
+		if len(s.Executable) > 0 {
+			armaExecutable = strings.Join([]string{s.Path, s.Executable}, "\\")
+		} else {
+			armaExecutable = strings.Join([]string{s.Path, "arma3server_x64.exe"}, "\\")
+		}
 		mods = strings.Join(s.Mods, ";")
 	case Linux:
-		armaExecutable = strings.Join([]string{s.Path, "arma3server"}, "/")
+		if len(s.Executable) > 0 {
+			armaExecutable = strings.Join([]string{s.Path, s.Executable}, "/")
+		} else {
+			armaExecutable = strings.Join([]string{s.Path, "arma3server_x64"}, "/")
+		}
 		mods = strings.Join(s.Mods, `\;`)
 	default:
 		// s.Logger.Error("Platform not specified, should be windows, wine, or linux")
@@ -163,13 +177,13 @@ func (s *HeadlessClient) Start() (string, []string) {
 
 	switch s.Platform {
 	case Windows:
-		armaExecutable = strings.Join([]string{s.Path, "arma3server.exe"}, "\\")
+		armaExecutable = strings.Join([]string{s.Path, "arma3server_x64.exe"}, "\\")
 		mods = strings.Join(s.Mods, ";")
 	case Wine:
-		armaExecutable = strings.Join([]string{s.Path, "arma3server.exe"}, "/")
+		armaExecutable = strings.Join([]string{s.Path, "arma3server_x64.exe"}, "/")
 		mods = strings.Join(s.Mods, ";")
 	case Linux:
-		armaExecutable = strings.Join([]string{s.Path, "arma3server"}, "/")
+		armaExecutable = strings.Join([]string{s.Path, "arma3server_x64"}, "/")
 		mods = strings.Join(s.Mods, `\;`)
 	default:
 		// s.Logger.Error("Platform not specified, should be windows, wine, or linux")
