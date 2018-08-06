@@ -2,6 +2,7 @@ package arma
 
 import (
 	"log"
+	"os"
 
 	"os/exec"
 	"strings"
@@ -74,7 +75,7 @@ func NewServer(server *Server) *Server {
 }
 
 // Start an Arma server. Returns path to executable and args used
-func (s *Server) Start() (string, []string) {
+func (s *Server) Start() chan *os.Process {
 
 	var mods string
 	var args []string
@@ -156,9 +157,12 @@ func (s *Server) Start() (string, []string) {
 	}
 
 	c := exec.Command(armaExecutable, args...)
+	processCh := make(chan *os.Process)
+	go func() {
+		processCh <- c.Process
+	}()
 	c.Start()
-
-	return armaExecutable, args
+	return processCh
 }
 
 // NewHeadlessClient starts a new instance of HeadlessClient with defaults set. ProfileName are required
@@ -169,7 +173,7 @@ func NewHeadlessClient(hc *HeadlessClient) *HeadlessClient {
 }
 
 // Start an Arma server. Returns path to executable and args used
-func (s *HeadlessClient) Start() (string, []string) {
+func (s *HeadlessClient) Start() chan *os.Process {
 
 	var mods string
 	var args []string
@@ -177,13 +181,25 @@ func (s *HeadlessClient) Start() (string, []string) {
 
 	switch s.Platform {
 	case Windows:
-		armaExecutable = strings.Join([]string{s.Path, "arma3server_x64.exe"}, "\\")
+		if len(s.Executable) > 0 {
+			armaExecutable = strings.Join([]string{s.Path, s.Executable}, "\\")
+		} else {
+			armaExecutable = strings.Join([]string{s.Path, "arma3server_x64.exe"}, "\\")
+		}
 		mods = strings.Join(s.Mods, ";")
 	case Wine:
-		armaExecutable = strings.Join([]string{s.Path, "arma3server_x64.exe"}, "/")
+		if len(s.Executable) > 0 {
+			armaExecutable = strings.Join([]string{s.Path, s.Executable}, "\\")
+		} else {
+			armaExecutable = strings.Join([]string{s.Path, "arma3server_x64.exe"}, "\\")
+		}
 		mods = strings.Join(s.Mods, ";")
 	case Linux:
-		armaExecutable = strings.Join([]string{s.Path, "arma3server_x64"}, "/")
+		if len(s.Executable) > 0 {
+			armaExecutable = strings.Join([]string{s.Path, s.Executable}, "/")
+		} else {
+			armaExecutable = strings.Join([]string{s.Path, "arma3server_x64"}, "/")
+		}
 		mods = strings.Join(s.Mods, `\;`)
 	default:
 		// s.Logger.Error("Platform not specified, should be windows, wine, or linux")
@@ -220,7 +236,11 @@ func (s *HeadlessClient) Start() (string, []string) {
 	}
 
 	c := exec.Command(armaExecutable, args...)
+	processCh := make(chan *os.Process)
+	go func() {
+		processCh <- c.Process
+	}()
 	c.Start()
 
-	return armaExecutable, args
+	return processCh
 }
